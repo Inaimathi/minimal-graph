@@ -1,7 +1,8 @@
 module Data.MinimalGraph ( fromPairs, fromTriples
                     , vertices, neighbors, query, Query(..)) where
 
-import Data.List (nub)
+import Data.Function (on)
+import Data.List (nub, sortBy)
 
 data Edge a b = Edge { label :: b, from :: a, to :: a } deriving (Eq, Ord, Show)
 
@@ -33,6 +34,8 @@ neighbors g v = concat [map to $ edgesFrom g v, map from $ edgesTo g v]
 
 data Query b = Out (b -> Bool)
              | In (b -> Bool)
+             | InC (b -> b -> Ordering)
+             | OutC (b -> b -> Ordering)
              | AllOut
              | AllIn
 
@@ -44,5 +47,7 @@ query q g v = recur q [v]
                   where step = case clause of
                                  AllOut -> map to . edgesFrom g
                                  AllIn -> map from . edgesTo g
+                                 InC f -> map from .take 1 . sortBy (f `on` label) . edgesTo g
+                                 OutC f -> map to . take 1 . sortBy (f `on` label) . edgesTo g
                                  Out f -> map to . filter (f . label). edgesFrom g
                                  In f -> map from . filter (f . label) . edgesTo g
