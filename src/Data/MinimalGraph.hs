@@ -1,5 +1,5 @@
 module Data.MinimalGraph ( fromPairs, fromTriples
-                    , vertices, neighbors, query, Query(..)) where
+                    , vertices, neighbors, query, Query(..), every) where
 
 import Data.Function (on)
 import Data.List (nub, sortBy)
@@ -34,20 +34,26 @@ neighbors g v = concat [map to $ edgesFrom g v, map from $ edgesTo g v]
 
 data Query b = Out (b -> Bool)
              | In (b -> Bool)
-             | InC (b -> b -> Ordering)
-             | OutC (b -> b -> Ordering)
-             | AllOut
-             | AllIn
+             | InBy (b -> b -> Ordering)
+             | OutBy (b -> b -> Ordering)
+             | And [Query b]
+             | Take Int
+             | Drop Int
 
 query :: Eq a => [Query b] -> Graph a b -> a -> [a]
 query q g v = recur q [v]
     where recur [] acc = acc
-          recur (clause:rest) acc =
-              recur rest $ concatMap step acc
-                  where step = case clause of
-                                 AllOut -> map to . edgesFrom g
-                                 AllIn -> map from . edgesTo g
-                                 InC f -> map from .take 1 . sortBy (f `on` label) . edgesTo g
-                                 OutC f -> map to . take 1 . sortBy (f `on` label) . edgesTo g
-                                 Out f -> map to . filter (f . label). edgesFrom g
-                                 In f -> map from . filter (f . label) . edgesTo g
+          recur (clause:rest) acc = recur rest $ next clause acc
+          next (Take n) vs = take n vs
+          next (Drop n) vs = drop n vs
+          next (And qs) vs = concatMap (flip next vs) qs
+          next clause vs = concatMap step vs
+              where step = case clause of
+                             InBy f -> map from . sortBy (f `on` label) . edgesTo g
+                             OutBy f -> map to . sortBy (f `on` label) . edgesTo g
+                             Out f -> map to . filter (f . label). edgesFrom g
+                             In f -> map from . filter (f . label) . edgesTo g
+                             _ -> error "Not implemented. (This should never happen)."
+
+every :: a -> Bool
+every _ = True
