@@ -37,15 +37,15 @@ data Query b = Out (b -> Bool)
              | InBy (b -> b -> Ordering)
              | OutBy (b -> b -> Ordering)
              | And [Query b]
-             | Take Int
-             | Drop Int
+             | Take Int (Query b)
+             | Drop Int (Query b)
 
 query :: Eq a => [Query b] -> Graph a b -> a -> [a]
 query q g v = recur q [v]
     where recur [] acc = acc
           recur (clause:rest) acc = recur rest $ next clause acc
-          next (Take n) vs = take n vs
-          next (Drop n) vs = drop n vs
+          next (Take n q) vs = take n $ next q vs
+          next (Drop n q) vs = drop n $ next q vs
           next (And qs) vs = concatMap (flip next vs) qs
           next clause vs = concatMap step vs
               where step = case clause of
