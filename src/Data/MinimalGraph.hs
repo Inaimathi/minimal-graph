@@ -46,7 +46,7 @@ query q g v = recur q [v]
           recur (clause:rest) acc = recur rest $ next clause acc
           next (Take n q) vs = take n $ next q vs
           next (Drop n q) vs = drop n $ next q vs
-          next (And qs) vs = concatMap (flip next vs) qs
+          next (And qs) vs = interleave $ map (flip next vs) qs
           next clause vs = concatMap step vs
               where step = case clause of
                              InBy f -> map from . sortBy (f `on` label) . edgesTo g
@@ -57,3 +57,8 @@ query q g v = recur q [v]
 
 every :: a -> Bool
 every _ = True
+
+interleave :: [[a]] -> [a]
+interleave as = next $ concatMap (take 1) as
+    where next [] = []
+          next lst = lst ++ (interleave $ map (drop 1) as)
